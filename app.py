@@ -69,7 +69,7 @@ if submit_button:
         st.markdown(f"""
         ### 🚀 What's next?
         1. **Captain-Huan** will process your vision using LLM (Large Language Models) for semantic analysis.
-        2. A customized **Match Report** will be sent to your email (**{email}**) within 48 hours.
+        2. A customized **Match Report** will be sent to your email (**{email}**) as soon as possible.
         3. Keep an eye on your inbox from `VisionsMatch`.
         """)
 
