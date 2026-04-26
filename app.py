@@ -69,11 +69,11 @@ with st.form("match_form"):
 # 5. 提交逻辑与数据持久化
 if submit_button:
     if not name or not email or not vision:
-        st.error("Please fill in Name, Email, and Vision to ensure matching accuracy.")
+        st.error("Please fill in required fields.")
     else:
         try:
-            # 整理单行数据
-            new_row = {
+            # 简化数据，直接创建一个只有这一行数据的 DataFrame
+            new_data = pd.DataFrame([{
                 "Name": name,
                 "Gender": gender,
                 "Age": age,
@@ -84,17 +84,16 @@ if submit_button:
                 "Partner_Qualities": partner_quality,
                 "Vision": vision,
                 "Email": email
-            }
+            }])
             
-            # 尝试读取现有数据 (ttl=0 保证不读取缓存)
-            try:
-                # 这里的 worksheet="Sheet1" 必须对应 Google 表格底部的标签名
-                existing_data = conn.read(worksheet="Sheet1", ttl=0)
-                # 清洗掉可能存在的全空行
-                existing_data = existing_data.dropna(how="all")
-            except Exception:
-                # 如果读取失败（比如表格完全是空的），则创建一个空的 DataFrame
-                existing_data = pd.DataFrame(columns=new_row.keys())
+            # 暴力写入：不读旧数据，直接覆盖或写入到 Sheet1
+            # 这一步如果通了，说明 Secrets 和权限就没问题了
+            conn.update(worksheet="Sheet1", data=new_data)
+            
+            st.success("Connection Success! Data written.")
+            st.balloons()
+        except Exception as e:
+            st.error(f"Error: {e}")
 
             # 合并新旧数据
             updated_df = pd.concat([existing_data, pd.DataFrame([new_row])], ignore_index=True)
