@@ -26,7 +26,7 @@ st.markdown("""
 # 统一使用 VisionsMatch
 st.title("🏳️‍🌈 VisionsMatch")
 st.markdown("### Where Visions Align.")
-st.write("Match with partners based on long-term life visions, not just photos.")
+st.write("Match with partners and friends based on long-term life visions, not just photos.")
 st.caption("Alpha Testing: AI will analyze your vision for the best match. Captain-Huan will make sure AI doesn't hallucinate.")
 
 # Form Implementation
