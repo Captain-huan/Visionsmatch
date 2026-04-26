@@ -26,21 +26,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 核心配置：自动修复 Private Key 换行问题 ---
-# 我们在建立连接前，通过逻辑确保内存中的 key 格式是正确的
-if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
-    # 这一行逻辑非常关键，它在后台静默处理你刚才在 Secrets 里贴的那串字符
-    raw_key = st.secrets["connections"]["gsheets"]["private_key"]
-    # 我们不直接修改 st.secrets，但在建立 connection 时，GSheetsConnection 会读取处理后的环境
-# ----------------------------------------------
-
 # 3. 建立 Google Sheets 连接
-conn = st.connection("gsheets", type=GSheetsConnection)
+# 根据 TOML 1.1.0 规范，只要 Secrets 里的 private_key 使用三单引号 ''' 包裹物理换行，
+# 此处的 conn 会自动获取最纯净的密钥格式，无需手动 replace。
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception as e:
+    st.error("Database connection failed during initialization.")
+    st.stop()
 
 st.title("🏳️‍🌈 VisionsMatch")
 st.markdown("### Where Visions Align.")
 st.write("Match with partners based on long-term life visions, not just photos.")
-st.caption("Alpha Testing: AI will analyze your vision for the best match. Captain-Huan will make sure AI doesn't hallucinate.")
+st.caption("Alpha Testing: AI will analyze your vision for the best match. Captain-Huan will ensure AI integrity.")
 
 # 4. 表单设计 (Form Implementation)
 with st.form("match_form"):
@@ -82,7 +80,7 @@ if submit_button:
         try:
             # 整理单行数据
             new_row = {
-                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), # 建议增加一个时间戳
+                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "Name": name,
                 "Gender": gender,
                 "Age": age,
@@ -95,14 +93,15 @@ if submit_button:
                 "Email": email
             }
             
-            # 尝试读取现有数据 (ttl=0 保证不读取最新数据)
+            # 尝试读取现有数据 (ttl=0 保证不读取缓存)
             try:
-                # 获取现有 DataFrame
                 existing_data = conn.read(worksheet="Sheet1", ttl=0)
+                # 过滤掉全空行，防止索引混乱
                 if existing_data is not None:
                     existing_data = existing_data.dropna(how="all")
-            except:
-                existing_data = pd.DataFrame()
+            except Exception:
+                # 如果是全新的表格或读取失败，初始化一个带表头的空表
+                existing_data = pd.DataFrame(columns=new_row.keys())
 
             # 合并新旧数据
             if existing_data is not None and not existing_data.empty:
