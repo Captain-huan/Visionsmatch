@@ -21,7 +21,7 @@ st.markdown("""
         font-weight: bold;
     }
     </style>
-    """, unsafe_allow_messages=True)
+    """, unsafe_allow_html=True)
 
 st.title("🏳️‍🌈 VisionMatch")
 st.markdown("### Beyond the Swiping Culture")
