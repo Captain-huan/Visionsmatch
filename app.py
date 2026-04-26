@@ -37,7 +37,7 @@ with st.form("match_form"):
         name = st.text_input("Name / Nickname")
         gender = st.selectbox("Gender Identity", ["Man", "Woman", "Non-binary", "Other"])
     with col2:
-        age = st.number_input("Age", min_value=18, min_value=18, max_value=100, value=25)
+        age = st.number_input("Age", min_value=18, max_value=100, value=25)
         orientation = st.selectbox("Orientation", ["Gay", "Lesbian", "Bi", "Queer", "Other"])
     
     birthday = st.date_input("Birthday (Optional, for astrological insights)")
