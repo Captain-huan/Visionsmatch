@@ -3,14 +3,14 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# 1. 页面配置
+# 1. 页面配置 (Page Configuration)
 st.set_page_config(
     page_title="VisionsMatch | AI-Driven Social Lab", 
     page_icon="🏳️‍🌈", 
     layout="centered"
 )
 
-# 2. 自定义样式
+# 2. 自定义样式 (Custom Styling)
 st.markdown("""
     <style>
     .main {
@@ -26,31 +26,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 3. 建立 Google Sheets 连接 - 修改这部分
-@st.cache_resource
-def init_connection():
-    try:
-        # 检查secrets是否存在
-        if "connections" not in st.secrets or "gsheets" not in st.secrets["connections"]:
-            st.error("Google Sheets connection configuration not found in secrets.toml")
-            st.stop()
-        
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        return conn
-    except Exception as e:
-        st.error(f"Database connection failed: {str(e)}")
-        st.info("Please check your secrets.toml configuration and ensure the private key is complete.")
-        st.stop()
-
-# 尝试连接
-conn = init_connection()
+# 3. 建立 Google Sheets 连接
+# 根据 TOML 1.1.0 规范，只要 Secrets 里的 private_key 使用三单引号 ''' 包裹物理换行，
+# 此处的 conn 会自动获取最纯净的密钥格式，无需手动 replace。
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception as e:
+    st.error("Database connection failed during initialization.")
+    st.stop()
 
 st.title("🏳️‍🌈 VisionsMatch")
 st.markdown("### Where Visions Align.")
 st.write("Match with partners based on long-term life visions, not just photos.")
 st.caption("Alpha Testing: AI will analyze your vision for the best match. Captain-Huan will ensure AI integrity.")
 
-# 4. 表单设计
+# 4. 表单设计 (Form Implementation)
 with st.form("match_form"):
     st.info("📍 Basic Information")
     col1, col2 = st.columns(2)
@@ -103,25 +93,21 @@ if submit_button:
                 "Email": email
             }
             
-            # 尝试读取现有数据
+            # 尝试读取现有数据 (ttl=0 保证不读取缓存)
             try:
                 existing_data = conn.read(worksheet="Sheet1", ttl=0)
-                if existing_data is not None and not existing_data.empty:
-                    # 清理全空行
+                # 过滤掉全空行，防止索引混乱
+                if existing_data is not None:
                     existing_data = existing_data.dropna(how="all")
-                else:
-                    existing_data = pd.DataFrame(columns=list(new_row.keys()))
-            except Exception as read_err:
-                # 如果worksheet不存在或为空，创建新的DataFrame
-                st.warning(f"Creating new worksheet: {str(read_err)}")
-                existing_data = pd.DataFrame(columns=list(new_row.keys()))
-            
+            except Exception:
+                # 如果是全新的表格或读取失败，初始化一个带表头的空表
+                existing_data = pd.DataFrame(columns=new_row.keys())
+
             # 合并新旧数据
-            new_df = pd.DataFrame([new_row])
             if existing_data is not None and not existing_data.empty:
-                updated_df = pd.concat([existing_data, new_df], ignore_index=True)
+                updated_df = pd.concat([existing_data, pd.DataFrame([new_row])], ignore_index=True)
             else:
-                updated_df = new_df
+                updated_df = pd.DataFrame([new_row])
             
             # 写回 Google Sheets
             conn.update(worksheet="Sheet1", data=updated_df)
@@ -135,10 +121,10 @@ if submit_button:
             """)
             
         except Exception as e:
-            st.error(f"Submission failed: {str(e)}")
-            st.info("Please contact Captain-Huan for support.")
+            st.error("Submission failed.")
+            st.info(f"Captain's Debug Log: {e}")
 
-# 6. 页脚
+# 6. 页脚 (Footer)
 st.divider()
 st.caption("Developed by Captain-Huan | TikTok @captainhuan")
 st.caption("VisionsMatch © 2026 - An AI-Native Social Experiment for the LGBTQ+ Community")
