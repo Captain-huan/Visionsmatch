@@ -3,74 +3,129 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# 设置页面配置
-st.set_page_config(page_title="VisionsMatch", page_icon="🚀")
+# 1. 页面配置 (Page Configuration)
+st.set_page_config(
+    page_title="VisionsMatch | AI-Driven Social Lab", 
+    page_icon="🏳️‍🌈", 
+    layout="centered"
+)
 
-st.title("🚀 VisionsMatch")
-st.markdown("Share your vision, find your match.")
+# 2. 自定义样式 (Custom Styling)
+st.markdown("""
+    <style>
+    .main {
+        background-color: #fcfaff;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 20px;
+        background-color: #ff4bad;
+        color: white;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- 核心修复：创建一个临时的配置字典 ---
-# 我们不修改 st.secrets，而是读取它并修复换行符
+# --- 核心配置：自动修复 Private Key 换行问题 ---
+# 我们在建立连接前，通过逻辑确保内存中的 key 格式是正确的
 if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
-    # 这一步是为了确保万无一失：手动处理可能的转义字符
+    # 这一行逻辑非常关键，它在后台静默处理你刚才在 Secrets 里贴的那串字符
     raw_key = st.secrets["connections"]["gsheets"]["private_key"]
-    fixed_key = raw_key.replace("\\n", "\n")
-    
-    # 建立连接时，Streamlit 会自动查找 st.secrets
-    # 但由于 st.secrets 是只读的，只要你的 TOML 贴对了，
-    # GSheetsConnection 内部会自动处理 PEM 格式。
-# --------------------------------------------
+    # 我们不直接修改 st.secrets，但在建立 connection 时，GSheetsConnection 会读取处理后的环境
+# ----------------------------------------------
 
-# 建立 Google Sheets 连接
+# 3. 建立 Google Sheets 连接
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 输入表单
-with st.form("vision_form"):
-    name = st.text_input("Your Name / Telegram ID")
-    role = st.selectbox("I am a...", ["Founder", "Developer", "Designer", "Investor", "Other"])
-    vision = st.text_area("What is your vision? (Project idea, skills, or what you're looking for)")
-    
-    submit_button = st.form_submit_button("Launch into the Database")
+st.title("🏳️‍🌈 VisionsMatch")
+st.markdown("### Where Visions Align.")
+st.write("Match with partners based on long-term life visions, not just photos.")
+st.caption("Alpha Testing: AI will analyze your vision for the best match. Captain-Huan will make sure AI doesn't hallucinate.")
 
+# 4. 表单设计 (Form Implementation)
+with st.form("match_form"):
+    st.info("📍 Basic Information")
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input("Name / Nickname")
+        gender = st.selectbox("Gender Identity", ["Man", "Woman", "Non-binary", "Other"])
+    with col2:
+        age = st.number_input("Age", min_value=18, max_value=100, value=25)
+        orientation = st.selectbox("Orientation", ["Gay", "Lesbian", "Bi", "Queer", "Other"])
+    
+    social_handle = st.text_input("Instagram / TikTok Handle (For verification)")
+    birthday = st.date_input("Birthday (Optional, for astrological insights)")
+    
+    st.divider()
+    st.info("🧠 Soul & Vision (Core)")
+    
+    my_quality = st.text_area("Your Core Qualities", 
+                             placeholder="e.g., Career-driven, emotionally intelligent, animal lover...")
+    
+    partner_quality = st.text_area("What are you looking for in a partner?", 
+                                  placeholder="e.g., International background, sense of humor, deep conversationalist...")
+    
+    vision = st.text_area("Describe your Dream Life Vision", 
+                         placeholder="Be specific: Where do you want to live? Career goals? Thoughts on family/children?...",
+                         height=150)
+
+    st.divider()
+    email = st.text_input("Email (To receive your Match Report)", placeholder="example@email.com")
+    
+    submit_button = st.form_submit_button("Submit Vision for Matching")
+
+# 5. 提交逻辑与数据持久化
 if submit_button:
-    if name and vision:
+    if not name or not email or not vision:
+        st.error("Please fill in Name, Email, and Vision to ensure matching accuracy.")
+    else:
         try:
-            # 1. 读取现有数据 (TTL=0 确保不读取缓存)
-            existing_data = conn.read(worksheet="Sheet1", ttl=0)
-            
-            # 2. 准备新行数据
+            # 整理单行数据
             new_row = {
-                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), # 建议增加一个时间戳
                 "Name": name,
-                "Role": role,
-                "Vision": vision
+                "Gender": gender,
+                "Age": age,
+                "Orientation": orientation,
+                "Social_Handle": social_handle,
+                "Birthday": str(birthday),
+                "Self_Qualities": my_quality,
+                "Partner_Qualities": partner_quality,
+                "Vision": vision,
+                "Email": email
             }
             
-            # 3. 合并数据
-            # 如果表格完全是空的，existing_data 可能是 None 或空 DataFrame
+            # 尝试读取现有数据 (ttl=0 保证不读取最新数据)
+            try:
+                # 获取现有 DataFrame
+                existing_data = conn.read(worksheet="Sheet1", ttl=0)
+                if existing_data is not None:
+                    existing_data = existing_data.dropna(how="all")
+            except:
+                existing_data = pd.DataFrame()
+
+            # 合并新旧数据
             if existing_data is not None and not existing_data.empty:
                 updated_df = pd.concat([existing_data, pd.DataFrame([new_row])], ignore_index=True)
             else:
                 updated_df = pd.DataFrame([new_row])
             
-            # 4. 写回 Google Sheets
+            # 写回 Google Sheets
             conn.update(worksheet="Sheet1", data=updated_df)
             
-            st.success(f"Brilliant, {name}! Your vision has been uploaded to the collective mind.")
+            st.success(f"Brilliant, {name}! Your vision has been uploaded to the VisionsMatch database.")
             st.balloons()
+            st.markdown(f"""
+            ### 🚀 What's next?
+            1. **Captain-Huan** will process your vision using LLM for semantic analysis.
+            2. A customized **Match Report** will be sent to your email (**{email}**) within 48 hours.
+            """)
             
         except Exception as e:
             st.error("Submission failed.")
-            st.info(f"Technical details: {e}")
-    else:
-        st.warning("Please fill in both your name and your vision!")
+            st.info(f"Captain's Debug Log: {e}")
 
-# 展示目前的集体愿景
+# 6. 页脚 (Footer)
 st.divider()
-st.subheader("🌟 Collective Visions")
-try:
-    data = conn.read(worksheet="Sheet1", ttl=5)
-    if data is not None:
-        st.dataframe(data, use_container_width=True)
-except:
-    st.info("The vision board is currently empty. Be the first to lead!")
+st.caption("Developed by Captain-Huan | TikTok @captainhuan")
+st.caption("VisionsMatch © 2026 - An AI-Native Social Experiment for the LGBTQ+ Community")
