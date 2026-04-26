@@ -1,4 +1,6 @@
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
 
 # Page Configuration
 st.set_page_config(
@@ -23,7 +25,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 统一使用 VisionsMatch
+# Establish Google Sheets Connection
+conn = st.connection("gsheets", type=GSheetsConnection)
+
 st.title("🏳️‍🌈 VisionsMatch")
 st.markdown("### Where Visions Align.")
 st.write("Match with partners based on long-term life visions, not just photos.")
@@ -40,6 +44,7 @@ with st.form("match_form"):
         age = st.number_input("Age", min_value=18, max_value=100, value=25)
         orientation = st.selectbox("Orientation", ["Gay", "Lesbian", "Bi", "Queer", "Other"])
     
+    social_handle = st.text_input("Instagram / TikTok Handle (For verification)")
     birthday = st.date_input("Birthday (Optional, for astrological insights)")
     
     st.divider()
@@ -64,14 +69,38 @@ if submit_button:
     if not name or not email or not vision:
         st.error("Please fill in your Name, Email, and Vision to ensure matching accuracy.")
     else:
-        st.success(f"Brilliant, {name}! Your vision has been uploaded to the VisionsMatch database.")
-        st.balloons()
-        st.markdown(f"""
-        ### 🚀 What's next?
-        1. **Captain-Huan** will process your vision using LLM (Large Language Models) for semantic analysis.
-        2. A customized **Match Report** will be sent to your email (**{email}**) as soon as possible.
-        3. Keep an eye on your inbox from `VisionsMatch`.
-        """)
+        try:
+            # Prepare data for Google Sheets
+            new_data = pd.DataFrame([{
+                "Name": name,
+                "Gender": gender,
+                "Age": age,
+                "Orientation": orientation,
+                "Social_Handle": social_handle,
+                "Birthday": str(birthday),
+                "Self_Qualities": my_quality,
+                "Partner_Qualities": partner_quality,
+                "Vision": vision,
+                "Email": email
+            }])
+            
+            # Read existing data and append
+            existing_data = conn.read(worksheet="Sheet1")
+            updated_df = pd.concat([existing_data, new_data], ignore_index=True)
+            
+            # Update Google Sheets
+            conn.update(worksheet="Sheet1", data=updated_df)
+            
+            st.success(f"Brilliant, {name}! Your vision has been uploaded to the VisionsMatch database.")
+            st.balloons()
+            st.markdown(f"""
+            ### 🚀 What's next?
+            1. **Captain-Huan** will process your vision using LLM for semantic analysis.
+            2. A customized **Match Report** will be sent to your email (**{email}**) as soon as possible.
+            """)
+        except Exception as e:
+            st.error("Submission failed. Please check if the Google Sheet connection is configured correctly.")
+            st.write(e)
 
 # Footer
 st.divider()
