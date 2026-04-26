@@ -2,7 +2,7 @@ import streamlit as st
 
 # Page Configuration
 st.set_page_config(
-    page_title="VisionMatch | AI-Driven Social Lab", 
+    page_title="VisionsMatch | AI-Driven Social Lab", 
     page_icon="🏳️‍🌈", 
     layout="centered"
 )
@@ -23,10 +23,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏳️‍🌈 VisionMatch")
-st.markdown("### Beyond the Swiping Culture")
+# 统一使用 VisionsMatch
+st.title("🏳️‍🌈 VisionsMatch")
+st.markdown("### Where Visions Align.")
 st.write("Match with partners based on long-term life visions, not just photos.")
-st.caption("Alpha Testing: Captain-Huan will personally analyze your vision with AI for the best match.")
+st.caption("Alpha Testing: AI will analyze your vision for the best match. Captain-Huan will make sure AI doesn't hallucinate.")
 
 # Form Implementation
 with st.form("match_form"):
@@ -36,7 +37,7 @@ with st.form("match_form"):
         name = st.text_input("Name / Nickname")
         gender = st.selectbox("Gender Identity", ["Man", "Woman", "Non-binary", "Other"])
     with col2:
-        age = st.number_input("Age", min_value=18, max_value=100, value=25)
+        age = st.number_input("Age", min_value=18, min_value=18, max_value=100, value=25)
         orientation = st.selectbox("Orientation", ["Gay", "Lesbian", "Bi", "Queer", "Other"])
     
     birthday = st.date_input("Birthday (Optional, for astrological insights)")
@@ -63,16 +64,16 @@ if submit_button:
     if not name or not email or not vision:
         st.error("Please fill in your Name, Email, and Vision to ensure matching accuracy.")
     else:
-        st.success(f"Brilliant, {name}! Your vision has been uploaded to the VisionMatch database.")
+        st.success(f"Brilliant, {name}! Your vision has been uploaded to the VisionsMatch database.")
         st.balloons()
         st.markdown(f"""
         ### 🚀 What's next?
         1. **Captain-Huan** will process your vision using LLM (Large Language Models) for semantic analysis.
         2. A customized **Match Report** will be sent to your email (**{email}**) within 48 hours.
-        3. Keep an eye on your inbox from `VisionMatch`.
+        3. Keep an eye on your inbox from `VisionsMatch`.
         """)
 
 # Footer
 st.divider()
 st.caption("Developed by Captain-Huan | TikTok @captainhuan")
-st.caption("VisionMatch © 2026 - An AI-Native Social Experiment for the LGBTQ+ Community")
+st.caption("VisionsMatch © 2026 - An AI-Native Social Experiment for the LGBTQ+ Community")
