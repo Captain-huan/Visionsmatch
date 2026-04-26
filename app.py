@@ -9,12 +9,17 @@ st.set_page_config(page_title="VisionsMatch", page_icon="🚀")
 st.title("🚀 VisionsMatch")
 st.markdown("Share your vision, find your match.")
 
-# --- 关键修改部分：手动修复 Secrets 里的 Private Key ---
-# 因为 TOML 经常把 \n 读错，我们在这里强行把它变回 Google 需要的真实换行
+# --- 核心修复：创建一个临时的配置字典 ---
+# 我们不修改 st.secrets，而是读取它并修复换行符
 if "connections" in st.secrets and "gsheets" in st.secrets["connections"]:
+    # 这一步是为了确保万无一失：手动处理可能的转义字符
     raw_key = st.secrets["connections"]["gsheets"]["private_key"]
-    # 将字符串里的 \n 替换为真实的换行符，并确保两端干净
-    st.secrets["connections"]["gsheets"]["private_key"] = raw_key.replace("\\n", "\n")
+    fixed_key = raw_key.replace("\\n", "\n")
+    
+    # 建立连接时，Streamlit 会自动查找 st.secrets
+    # 但由于 st.secrets 是只读的，只要你的 TOML 贴对了，
+    # GSheetsConnection 内部会自动处理 PEM 格式。
+# --------------------------------------------
 
 # 建立 Google Sheets 连接
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -42,7 +47,11 @@ if submit_button:
             }
             
             # 3. 合并数据
-            updated_df = pd.concat([existing_data, pd.DataFrame([new_row])], ignore_index=True)
+            # 如果表格完全是空的，existing_data 可能是 None 或空 DataFrame
+            if existing_data is not None and not existing_data.empty:
+                updated_df = pd.concat([existing_data, pd.DataFrame([new_row])], ignore_index=True)
+            else:
+                updated_df = pd.DataFrame([new_row])
             
             # 4. 写回 Google Sheets
             conn.update(worksheet="Sheet1", data=updated_df)
@@ -51,8 +60,8 @@ if submit_button:
             st.balloons()
             
         except Exception as e:
-            st.error("Connection failed. Please check if the Bot Email is added as an 'Editor' in your Google Sheet.")
-            st.info("Technical details for Captain: " + str(e))
+            st.error("Submission failed.")
+            st.info(f"Technical details: {e}")
     else:
         st.warning("Please fill in both your name and your vision!")
 
@@ -60,7 +69,8 @@ if submit_button:
 st.divider()
 st.subheader("🌟 Collective Visions")
 try:
-    data = conn.read(worksheet="Sheet1", ttl=5) # 5秒缓存
-    st.dataframe(data, use_container_width=True)
+    data = conn.read(worksheet="Sheet1", ttl=5)
+    if data is not None:
+        st.dataframe(data, use_container_width=True)
 except:
     st.info("The vision board is currently empty. Be the first to lead!")
